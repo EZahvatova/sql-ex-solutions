@@ -1,3 +1,91 @@
+/*
+Рассматривается БД кораблей, участвовавших во второй мировой войне. Имеются следующие отношения:
+Classes (class, type, country, numGuns, bore, displacement)
+Ships (name, class, launched)
+Battles (name, date)
+Outcomes (ship, battle, result)
+Корабли в «классах» построены по одному и тому же проекту, и классу присваивается либо имя первого корабля, построенного по данному проекту, либо названию класса дается имя проекта, которое не совпадает ни с одним из кораблей в БД. Корабль, давший название классу, называется головным.
+Отношение Classes содержит имя класса, тип (bb для боевого (линейного) корабля или bc для боевого крейсера), страну, в которой построен корабль, число главных орудий, калибр орудий (диаметр ствола орудия в дюймах) и водоизмещение ( вес в тоннах). В отношении Ships записаны название корабля, имя его класса и год спуска на воду. В отношение Battles включены название и дата битвы, в которой участвовали корабли, а в отношении Outcomes – результат участия данного корабля в битве (потоплен-sunk, поврежден - damaged или невредим - OK).
+Замечания. 1) В отношение Outcomes могут входить корабли, отсутствующие в отношении Ships. 2) Потопленный корабль в последующих битвах участия не принимает.
+*/
+
+--31
+/*
+Для классов кораблей, калибр орудий которых не менее 16 дюймов, укажите класс и страну.
+*/
+SELECT
+  class,
+  country
+FROM Classes
+WHERE bore >= 16;
+--33
+/*
+Укажите корабли, потопленные в сражениях в Северной Атлантике (North Atlantic). Вывод: ship.
+*/
+SELECT
+  ship
+FROM Outcomes
+WHERE battle = 'North Atlantic' AND result = 'sunk';
+--34
+/*
+По Вашингтонскому международному договору от начала 1922 г. запрещалось строить линейные корабли водоизмещением более 35 тыс.тонн. Укажите корабли, нарушившие этот договор (учитывать только корабли c известным годом спуска на воду). Вывести названия кораблей.
+*/
+SELECT
+  name
+FROM Ships a
+  LEFT JOIN Classes b
+    ON a.class = b.class
+WHERE displacement > 35000 AND launched > 1921 AND type = 'bb';
+--36
+/*
+Перечислите названия головных кораблей, имеющихся в базе данных (учесть корабли в Outcomes).
+ */
+SELECT
+  ship
+FROM Outcomes
+UNION
+SELECT
+  name
+FROM Ships
+WHERE name = class;
+--37
+/*
+Найдите классы, в которые входит только один корабль из базы данных (учесть также корабли в Outcomes).
+ */
+WITH v0 AS (
+  SELECT DISTINCT
+    class
+  FROM Outcomes
+    LEFT JOIN Classes
+      ON class = Outcomes.ship
+  WHERE ship NOT IN (
+    SELECT
+      name
+    FROM Ships
+  )
+  UNION ALL
+  SELECT
+    class
+  FROM Ships
+)
+SELECT
+  class
+FROM v0
+GROUP BY class
+HAVING COUNT(class) = 1;
+--38
+/*
+Найдите страны, имевшие когда-либо классы обычных боевых кораблей ('bb') и имевшие когда-либо классы крейсеров ('bc').
+*/
+SELECT
+  country
+FROM Classes
+WHERE type = 'bb'
+INTERSECT
+SELECT
+  country
+FROM Classes
+WHERE type = 'bc';
 --39
 /*
 Найдите корабли, `сохранившиеся для будущих сражений`; т.е. выведенные из строя в одной битве (damaged), они участвовали в другой, произошедшей позже.
@@ -11,37 +99,36 @@ WITH v0 AS (
     LEFT JOIN Battles b
       ON a.battle = b.name
 )
-SELECT *
-  --DISTINCT a.ship
+SELECT DISTINCT
+  a.ship
 FROM v0 a
   LEFT JOIN v0 b
     ON a.ship = b.ship
     AND a.date < b.date
 WHERE a.result IN ('OK', 'damaged')
   AND b.result IN ('OK', NULL);
---48
+--42
 /*
-Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении
+Найдите названия кораблей, потопленных в сражениях, и название сражения, в котором они были потоплены.
 */
-WITH v0 AS (
-  SELECT
-    class,
-    result
-  FROM Outcomes o
-    LEFT JOIN Classes c
-      ON o.ship = c.class
-  UNION
-  SELECT
-    class,
-    result
-  FROM Outcomes o
-    LEFT JOIN Ships s
-      ON o.ship = s.name
-)
 SELECT
-  class
-FROM v0
-WHERE result = 'sunk' AND class NOT NULL;
+  ship,
+  battle
+FROM Outcomes
+WHERE result = 'sunk';
+--43
+/*
+Укажите сражения, которые произошли в годы, не совпадающие ни с одним из годов спуска кораблей на воду.
+*/
+SELECT
+  name
+FROM Battles
+WHERE year(date) NOT IN (
+  SELECT
+    year(launched)
+  FROM Ships
+)
+  AND date IS NOT NULL;
 --44
 /*
 Найдите названия всех кораблей в базе данных, начинающихся с буквы R
@@ -70,6 +157,7 @@ FROM v0
 WHERE class LIKE 'R%';
 --45
 /*
+Найдите названия всех кораблей в базе данных, начинающихся с буквы R.
 */
 WITH v0 AS (
   SELECT
@@ -82,7 +170,6 @@ WITH v0 AS (
   UNION
   SELECT
     ship
-
   FROM Outcomes
 )
 SELECT *
@@ -110,7 +197,8 @@ SELECT
 FROM v0 a RIGHT JOIN outcomes b
 ON a.name=b.ship
   LEFT JOIN classes c
-  ON a.class=c.class;
+  ON a.class=c.class
+WHERE b.battle = 'Guadalcanal';
 --47
 /*
 Определить страны, которые потеряли в сражениях все свои корабли.
@@ -208,6 +296,60 @@ WHERE ship NOT IN (
   FROM v0
   WHERE result = 'sunk'
 );
+--48
+/*
+Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении
+*/
+WITH v0 AS (
+  SELECT
+    class,
+    result
+  FROM Outcomes o
+    LEFT JOIN Classes c
+      ON o.ship = c.class
+  UNION
+  SELECT
+    class,
+    result
+  FROM Outcomes o
+    LEFT JOIN Ships s
+      ON o.ship = s.name
+)
+SELECT
+  class
+FROM v0
+WHERE result = 'sunk' AND class NOT NULL;
+--49
+/*
+Найдите названия кораблей с орудиями калибра 16 дюймов (учесть корабли из таблицы Outcomes).
+*/
+WITH v0 AS (
+  SELECT
+    name,
+    bore
+  FROM Classes c RIGHT JOIN ships s
+  ON c.class=s.class
+  UNION
+  SELECT
+    ship, bore
+  FROM
+    classes c RIGHT JOIN Outcomes o
+  ON o.ship=c.class
+)
+SELECT
+  v0.name
+FROM v0
+WHERE bore = '16';
+--50
+/*
+Найдите сражения, в которых участвовали корабли класса Kongo из таблицы Ships.
+*/
+SELECT DISTINCT
+  battle
+FROM Ships s
+  LEFT JOIN Outcomes o
+    ON s.name = o.ship
+WHERE class = 'Kongo' AND battle <> 'NULL';
 --51
 /*
 Найдите названия кораблей, имеющих наибольшее число орудий среди всех имеющихся кораблей такого же водоизмещения (учесть корабли из таблицы Outcomes).
@@ -289,7 +431,6 @@ SELECT
 FROM v0 b
   LEFT JOIN Classes c
     ON b.class = c.class
-
 WHERE type = 'bb';
 --55
 /*Для каждого класса определите год, когда был спущен на воду первый корабль этого класса. Если год спуска на воду головного корабля неизвестен, определите минимальный год спуска на воду кораблей этого класса. Вывести: класс, год.
@@ -337,34 +478,9 @@ FROM potential_ships a
   LEFT JOIN Outcomes b
     ON a.name = b.ship
 GROUP BY class;
--- вывести список классов кораблей которые участвовали в битвах с четным числом
--- outcomes(ship,battle), battles(name,date)
--- /2==0
-WITH potential_ships AS (
-  SELECT
-    name,
-    class
-  FROM Ships
-  UNION
-  SELECT
-    class,
-    class
-  FROM Classes
-)
-SELECT
-  class,
-  SUM(
-    CASE WHEN b.date % 2 = 0 THEN 1
-         ELSE 0 END
-    )
-FROM potential_ships p
-  LEFT JOIN Outcomes o
-    ON o.ship = p.name
-  LEFT JOIN Battles b
-    ON b.name = o.battle
-GROUP BY class;
 -- 57
-/* Для классов, имеющих потери в виде потопленных кораблей и не менее 3 кораблей в базе данных, вывести имя класса и число потопленных кораблей
+/*
+Для классов, имеющих потери в виде потопленных кораблей и не менее 3 кораблей в базе данных, вывести имя класса и число потопленных кораблей
 */
 WITH potential_ships AS (
   SELECT
@@ -384,72 +500,10 @@ FROM potential_ships a
   LEFT JOIN Outcomes b
     ON a.name = b.ship
 GROUP BY class;
-
-/*
---58
-Для каждого типа продукции и каждого производителя из таблицы Product c точностью до двух десятичных знаков найти процентное отношение числа моделей данного типа данного производителя к общему числу моделей этого производителя.
-Вывод: maker, type, процентное отношение числа моделей данного типа к общему числу моделей производителя
-*/
-
-SELECT DISTINCT
-  maker,
-  type,
-  (
-        100.0 *
-        COUNT(1) OVER w1
-      /
-        COUNT(1) OVER w2
-    )
-    AS rate
-FROM Product
-  WINDOW
-    w1 AS (PARTITION BY type,maker),
-    w2 AS (PARTITION BY maker);
-WITH v0 AS (
-  SELECT
-    maker,
-    type,
-    COUNT(1) AS nominator
-  FROM Product
-  GROUP BY type, maker
-),v1 AS (
-  SELECT
-    maker,
-    COUNT(1) AS denominator
-  FROM Product
-  GROUP BY maker
-)
-SELECT
-  v0.maker,
-  type,
-  100.0 * nominator / denominator
-FROM v0
-  LEFT JOIN v1
-    ON v0.maker = v1.maker;
-SELECT
-  maker,
-  model,
-  type,
-  COUNT(1) OVER (PARTITION BY maker ORDER BY model)
-
-FROM Product
-ORDER BY maker, model, type;
-SELECT
-  maker,
-  model,
-    model - LEAD(model, 2) OVER (
-    PARTITION BY maker ORDER BY model
-    )
-
-FROM Product
---order by maker,model
-;
---idempotency . same result from 1 or 100 runs
-;
 --70
 /*
-
- */
+Укажите сражения, в которых участвовало по меньшей мере три корабля одной и той же страны.
+*/
 WITH potential_ships AS (
   SELECT
     name,
@@ -467,7 +521,6 @@ WITH potential_ships AS (
     class,
     country,
     COUNT(1) AS c
-
   FROM potential_ships a RIGHT JOIN Outcomes b
   ON a.NAME = b.ship
     LEFT JOIN classes C
@@ -479,34 +532,79 @@ SELECT DISTINCT
   battle
 FROM v1
 WHERE c > 3;
---60
+--73
 /*
-
- */
+Для каждой страны определить сражения, в которых не участвовали корабли данной страны.
+Вывод: страна, сражение
+*/
+WITH potential_ships AS (
+  SELECT
+    name,
+    Ships.class,
+    country
+  FROM Ships
+    LEFT JOIN Classes
+      ON Classes.class = Ships.class
+  UNION
+  SELECT
+    class,
+    class,
+    country
+  FROM Classes
+), country_battle AS (
+  SELECT
+    country,
+    battle
+  FROM potential_ships a
+    LEFT JOIN Outcomes b
+      ON a.name = b.ship
+  WHERE battle IS NOT NULL
+),all_battles AS (
+  SELECT
+    battle
+  FROM Outcomes
+  UNION
+  SELECT
+    name
+  FROM Battles
+),all_countries AS (
+  SELECT
+    country
+  FROM Classes
+),full_set AS (
+  SELECT DISTINCT
+    a.country,
+    b.battle
+  FROM all_countries a
+    CROSS JOIN all_battles b
+)
 SELECT
-  COALESCE(a.point, b.point),
-  COALESCE(a.date, b.date),
-  SUM(out),
-  SUM(inc)
-FROM income a FULL OUTER JOIN outcome b
-ON
-  a.point=b.point AND a.date=b.date
-GROUP BY coalesce(a.point, b.point),
-  coalesce(a.date, b.date)
-WHERE a.date<'20010415' AND b.date<'20010415';
---58
+  a.*
+FROM full_set a
+  LEFT JOIN country_battle b
+    ON a.country = b.country
+    AND a.battle = b.battle
+WHERE b.battle IS NULL;
+--74
 /*
-Для каждого типа продукции и каждого производителя из таблицы Product c точностью до двух десятичных знаков найти процентное отношение числа моделей данного типа данного производителя к общему числу моделей этого производителя.
-Вывод: maker, type, процентное отношение числа моделей данного типа к общему числу моделей производителя
- */
+Вывести все классы кораблей России (Russia). Если в базе данных нет классов кораблей России, вывести классы для всех имеющихся в БД стран.
+Вывод: страна, класс
+*/
 SELECT DISTINCT
-  maker,
-  type,
-  (
-        100.0 *
-        COUNT(1) OVER (PARTITION BY type, maker)
-      /
-        COUNT(1) OVER (PARTITION BY maker)
-    )
-    AS rate
-FROM Product;
+  country,
+  class
+FROM Classes
+WHERE EXISTS(
+  SELECT * FROM Classes WHERE country = 'Russia'
+  )
+  AND country = 'Russia'
+UNION
+SELECT DISTINCT
+  country,
+  class
+FROM Classes
+WHERE NOT EXISTS(
+  SELECT * FROM Classes WHERE country = 'Russia'
+  );
+
+
