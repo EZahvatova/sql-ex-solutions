@@ -205,97 +205,42 @@ WHERE b.battle = 'Guadalcanal';
 */
 WITH v0 AS (
   SELECT
-    country,
-    result
-  FROM Outcomes o
-    LEFT JOIN Classes c
-      ON o.ship = c.class
-  UNION
-  SELECT
-    class,
-    result
-  FROM Outcomes o
-    LEFT JOIN Ships s
-      ON o.ship = s.name
-)
-SELECT *
-  --country
-FROM v0
---WHERE result = 'sunk' AND country not null
-;
-WITH potential_ships AS (
-  SELECT
-    name,
-    class
-  FROM Ships
-  UNION
-  SELECT
-    class,
-    class
-  FROM Classes
-),v0 AS (
-  SELECT
-    country,
-    name,
-    result
-  FROM potential_ships a
-    LEFT JOIN Classes b
-      ON a.class = b.class
-    LEFT JOIN Outcomes c
-      ON a.name = c.ship
-), sunk AS (
-  SELECT
-    name
-  FROM v0
-  WHERE result = 'sunk'
-),healthy AS (
-  SELECT
-    name
-  FROM v0
-  WHERE name NOT IN (
-    SELECT
-      name
-    FROM sunk
-  )
-)
-SELECT
-  country
-FROM v0
-GROUP BY 1
-HAVING SUM(1 * (name IN (
-  SELECT
-    name
-  FROM healthy
-))) = 0;
-WITH v0 AS (
-  SELECT
     COALESCE(c.country, d.country) AS country,
-    a.ship,
+    COALESCE(a.ship, b.name) AS ship,
     result
-  FROM Outcomes a
-    LEFT JOIN Ships b
+  FROM Ships b
+    FULL JOIN
+  Outcomes a
       ON a.ship = b.name
     LEFT JOIN Classes c
       ON b.class = c.class
     LEFT JOIN Classes d
       ON a.ship = d.class
-  WHERE COALESCE(c.country, d.country) IS NOT NULL
+),sunk AS (
+  SELECT
+    country,
+    ship
+  FROM v0
+  WHERE result = 'sunk'
+),alive AS (
+  SELECT
+    a.country
+  FROM v0 a
+    LEFT JOIN sunk b
+      ON a.country = b.country
+      AND a.ship = b.ship
+  WHERE b.ship IS NULL
+    AND a.country IS NOT NULL
 )
 SELECT DISTINCT
   country
 FROM v0
-WHERE ship NOT IN (
+WHERE country NOT IN (
   SELECT
-    ship
-  FROM v0
-  WHERE result != 'sunk'
+    country
+  FROM alive
 )
-  AND ship IN (
-  SELECT
-    ship
-  FROM v0
-  WHERE result = 'sunk'
-);
+;
 --48
 /*
 Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении
@@ -492,14 +437,24 @@ WITH potential_ships AS (
     class,
     class
   FROM Classes
+),v0 AS (
+  SELECT
+    class,
+    SUM(CASE WHEN result = 'sunk' THEN 1 ELSE 0 END) AS sunk,
+    COUNT(1) AS c
+
+  FROM potential_ships a
+    LEFT JOIN outcomes b
+      ON b.ship = a.name
+  GROUP BY class
+
 )
 SELECT
   class,
-  SUM(CASE WHEN result = 'sunk' THEN 1 ELSE 0 END)
-FROM potential_ships a
-  LEFT JOIN Outcomes b
-    ON a.name = b.ship
-GROUP BY class;
+  sunk
+FROM v0
+WHERE sunk > 0
+  AND c >=3;
 --70
 /*
 Укажите сражения, в которых участвовало по меньшей мере три корабля одной и той же страны.
@@ -507,31 +462,38 @@ GROUP BY class;
 WITH potential_ships AS (
   SELECT
     name,
-    class
-  FROM Ships
+    country
+  FROM Ships a
+    LEFT JOIN Classes c
+      ON a.class = c.class
   UNION
   SELECT
     class,
-    class
+    country
   FROM Classes
 ), v1 AS (
   SELECT DISTINCT
     battle,
     ship,
-    class,
     country,
-    COUNT(1) AS c
-  FROM potential_ships a RIGHT JOIN Outcomes b
-  ON a.NAME = b.ship
-    LEFT JOIN classes C
-    ON a.class = C.class
--- all outcomes battle is not null so we right join instead
---  WHERE battle IS NOT NULL
+    1 AS c
+
+  FROM Outcomes b
+    LEFT JOIN potential_ships a
+      ON a.name = b.ship
+
+  WHERE country IS NOT NULL
+), v2 AS (
+  SELECT
+    country,
+    battle
+  FROM v1
+  GROUP BY country, battle
+  HAVING SUM(c) >= 3
 )
 SELECT DISTINCT
   battle
-FROM v1
-WHERE c > 3;
+FROM v2;
 --73
 /*
 Для каждой страны определить сражения, в которых не участвовали корабли данной страны.

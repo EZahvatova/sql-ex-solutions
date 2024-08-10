@@ -382,24 +382,24 @@ WHERE maker IN (
 /*
 Найдите среднюю цену ПК и ПК-блокнотов, выпущенных производителем A (латинская буква). Вывести: одна общая средняя цена.
 */
-WITH v0 AS (
-  SELECT
-    AVG(price) AS price
-  FROM Product a
-    LEFT JOIN PC b
-      ON a.model = b.model
-  WHERE maker = 'A'
-  UNION
-  SELECT
-    AVG(price)
-  FROM Product c
-    LEFT JOIN Laptop b
-      ON c.model = b.model
-  WHERE maker = 'A'
-)
+with v0 as (
+SELECT
+  price
+FROM product a
+  LEFT JOIN pc b
+    ON a.model = b.model
+WHERE maker = 'A'
+UNION ALL
+SELECT
+  price
+FROM product c
+  LEFT JOIN laptop b
+    ON c.model = b.model
+WHERE maker = 'A' )
 SELECT
   AVG(price)
-FROM v0;
+FROM v0
+;
 --27
 /*
 Найдите средний размер диска ПК каждого из тех производителей, которые выпускают и принтеры. Вывести: maker, средний размер HD.
