@@ -568,5 +568,5 @@ FROM Classes
 WHERE NOT EXISTS(
   SELECT * FROM Classes WHERE country = 'Russia'
   );
--- test
+
 
