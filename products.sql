@@ -382,24 +382,24 @@ WHERE maker IN (
 /*
 Найдите среднюю цену ПК и ПК-блокнотов, выпущенных производителем A (латинская буква). Вывести: одна общая средняя цена.
 */
-with v0 as (
-SELECT
-  price
-FROM product a
-  LEFT JOIN pc b
-    ON a.model = b.model
-WHERE maker = 'A'
-UNION ALL
-SELECT
-  price
-FROM product c
-  LEFT JOIN laptop b
-    ON c.model = b.model
-WHERE maker = 'A' )
+WITH v0 AS (
+  SELECT
+    price
+  FROM Product a
+    LEFT JOIN PC b
+      ON a.model = b.model
+  WHERE maker = 'A'
+  UNION ALL
+  SELECT
+    price
+  FROM Product c
+    LEFT JOIN Laptop b
+      ON c.model = b.model
+  WHERE maker = 'A'
+)
 SELECT
   AVG(price)
-FROM v0
-;
+FROM v0;
 --27
 /*
 Найдите средний размер диска ПК каждого из тех производителей, которые выпускают и принтеры. Вывести: maker, средний размер HD.
@@ -443,18 +443,23 @@ WITH v0 AS (
   SELECT
     maker,
     type,
-    COUNT(*) AS models
+    COUNT(1) AS c
   FROM Product
   GROUP BY maker, type
+),v1 AS (
+  SELECT
+    maker
+  FROM v0
+  GROUP BY maker
+  HAVING COUNT(1) = 1
 )
 SELECT
-  maker,
-  type
-FROM v0
-GROUP BY maker, type
-HAVING COUNT(*) = 1 AND SUM(models) > 1;
-SELECT *
-FROM Product;
+  b.maker,
+  b.type
+FROM v1 a
+  LEFT JOIN v0 b
+    ON a.maker = b.maker
+WHERE c > 1;
 --41
 /*
 Для каждого производителя, у которого присутствуют модели хотя бы в одной из таблиц PC, Laptop или Printer,
@@ -489,6 +494,17 @@ SELECT
   MAX(price)
 FROM v0
 GROUP BY maker;
+--43
+/*
+Укажите сражения, которые произошли в годы, не совпадающие ни с одним из годов спуска кораблей на воду.
+*/
+SELECT
+  name
+FROM battles
+WHERE year(date) NOT IN (
+  SELECT launched
+  FROM ships
+);
 --58
 /*
 Для каждого типа продукции и каждого производителя из таблицы Product c точностью до двух десятичных знаков найти процентное отношение числа моделей данного типа данного производителя к общему числу моделей этого производителя.
