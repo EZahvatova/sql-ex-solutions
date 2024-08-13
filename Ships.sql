@@ -43,6 +43,9 @@ WHERE displacement > 35000 AND launched > 1921 AND type = 'bb';
 SELECT
   ship
 FROM Outcomes
+  LEFT JOIN Classes
+    ON ship = class
+WHERE ship = class
 UNION
 SELECT
   name
@@ -208,14 +211,13 @@ WITH v0 AS (
     COALESCE(c.country, d.country) AS country,
     COALESCE(a.ship, b.name) AS ship,
     result
-  FROM Ships b
-    FULL JOIN
+  FROM Ships b FULL JOIN
   Outcomes a
-      ON a.ship = b.name
+  ON a.ship = b.name
     LEFT JOIN Classes c
-      ON b.class = c.class
+    ON b.class = c.class
     LEFT JOIN Classes d
-      ON a.ship = d.class
+    ON a.ship = d.class
 ),sunk AS (
   SELECT
     country,
@@ -239,8 +241,7 @@ WHERE country NOT IN (
   SELECT
     country
   FROM alive
-)
-;
+);
 --48
 /*
 Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении
@@ -444,7 +445,7 @@ WITH potential_ships AS (
     COUNT(1) AS c
 
   FROM potential_ships a
-    LEFT JOIN outcomes b
+    LEFT JOIN Outcomes b
       ON b.ship = a.name
   GROUP BY class
 
@@ -454,7 +455,7 @@ SELECT
   sunk
 FROM v0
 WHERE sunk > 0
-  AND c >=3;
+  AND c >= 3;
 --70
 /*
 Укажите сражения, в которых участвовало по меньшей мере три корабля одной и той же страны.
@@ -568,6 +569,3 @@ FROM Classes
 WHERE NOT EXISTS(
   SELECT * FROM Classes WHERE country = 'Russia'
   );
-
-
-test 1
