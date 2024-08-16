@@ -128,10 +128,9 @@ SELECT
 FROM Battles
 WHERE year(date) NOT IN (
   SELECT
-    year(launched)
+    launched
   FROM Ships
-)
-  AND date IS NOT NULL;
+);
 --44
 /*
 Найдите названия всех кораблей в базе данных, начинающихся с буквы R
@@ -569,3 +568,18 @@ FROM Classes
 WHERE NOT EXISTS(
   SELECT * FROM Classes WHERE country = 'Russia'
   );
+--78
+/*
+Для каждого сражения определить первый и последний день
+месяца,
+в котором оно состоялось.
+Вывод: сражение, первый день месяца, последний
+день месяца.
+Замечание: даты представить без времени в формате "yyyy-mm-dd".
+ */
+SELECT
+  name,
+  dateadd(day, - datepart(day, date) + 1, convert(date, date))
+    AS firstD,
+  EOMONTH(date) AS lastD
+FROM Battles;

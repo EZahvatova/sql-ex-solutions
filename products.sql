@@ -494,17 +494,6 @@ SELECT
   MAX(price)
 FROM v0
 GROUP BY maker;
---43
-/*
-Укажите сражения, которые произошли в годы, не совпадающие ни с одним из годов спуска кораблей на воду.
-*/
-SELECT
-  name
-FROM battles
-WHERE year(date) NOT IN (
-  SELECT launched
-  FROM ships
-);
 --58
 /*
 Для каждого типа продукции и каждого производителя из таблицы Product c точностью до двух десятичных знаков найти процентное отношение числа моделей данного типа данного производителя к общему числу моделей этого производителя.
@@ -525,3 +514,26 @@ FROM Product
 ;
 --idempotency . same result from 1 or 100 runs
 ;
+--65
+/*
+Пронумеровать уникальные пары {maker, type} из Product, упорядочив их следующим образом:
+- имя производителя (maker) по возрастанию;
+- тип продукта (type) в порядке PC, Laptop, Printer.
+Если некий производитель выпускает несколько типов продукции, то выводить его имя только в первой строке;
+остальные строки для ЭТОГО производителя должны содержать пустую строку символов ('').
+*/
+WITH v0 AS (
+  SELECT *
+  FROM Product
+  ORDER BY CASE
+    WHEN 'PC' THEN 1
+    WHEN 'Laptop' THEN 2
+    WHEN 'Printer' THEN 3
+    END
+)
+SELECT
+  ROW_NUMBER() OVER (ORDER BY maker) num,
+  maker,
+  type
+FROM v0
+GROUP BY maker, type
