@@ -523,17 +523,24 @@ FROM Product
 остальные строки для ЭТОГО производителя должны содержать пустую строку символов ('').
 */
 WITH v0 AS (
-  SELECT *
+  SELECT
+    maker,
+    type,
+    CASE type
+      WHEN 'PC' THEN 1
+      WHEN 'Laptop' THEN 2
+      WHEN 'Printer' THEN 3
+      END AS mycase
   FROM Product
-  ORDER BY CASE
-    WHEN 'PC' THEN 1
-    WHEN 'Laptop' THEN 2
-    WHEN 'Printer' THEN 3
-    END
+  GROUP BY maker, type
 )
 SELECT
-  ROW_NUMBER() OVER (ORDER BY maker) num,
-  maker,
+  ROW_NUMBER() OVER (ORDER BY maker,mycase) AS rownum,
+  CASE WHEN ((COUNT(1) OVER (
+    PARTITION BY maker ORDER BY mycase
+    )) = 1) THEN maker
+       ELSE '' END
+    AS maker,
   type
-FROM v0
-GROUP BY maker, type
+
+FROM v0;

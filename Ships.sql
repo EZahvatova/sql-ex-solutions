@@ -583,3 +583,74 @@ SELECT
     AS firstD,
   EOMONTH(date) AS lastD
 FROM Battles;
+--83
+/*
+ Определить названия всех кораблей из таблицы Ships, которые удовлетворяют, по крайней мере, комбинации любых четырёх критериев из следующего списка:
+numGuns = 8
+bore = 15
+displacement = 32000
+type = bb
+launched = 1915
+class=Kongo
+country=USA
+ */
+WITH v0 AS (
+  SELECT
+    name,
+    CASE WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
+               type = 'bb')
+           THEN 1
+         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
+               launched = 1915)
+           THEN 1
+         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
+               country = 'USA')
+           THEN 1
+         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
+               launched = 1915)
+           THEN 1
+         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
+               country = 'USA')
+           THEN 1
+         WHEN (displacement = 32000 AND type = 'bb' AND launched = 1915 AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (displacement = 32000 AND type = 'bb' AND launched = 1915 AND
+               country = 'USA')
+           THEN 1
+         WHEN (type = 'bb' AND launched = 1915 AND a.class = 'Kongo' AND
+               country = 'USA')
+           THEN 1
+         WHEN (numGuns = 8 AND displacement = 32000 AND launched = 1915 AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (numGuns = 8 AND displacement = 32000 AND launched = 1915 AND
+               country = 'USA')
+           THEN 1
+         WHEN (numGuns = 8 AND type = 'bb' AND launched = 1915 AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (numGuns = 8 AND type = 'bb' AND launched = 1915 AND
+               country = 'USA')
+           THEN 1
+         WHEN (bore = 15 AND type = 'bb' AND launched = 1915 AND
+               a.class = 'Kongo')
+           THEN 1
+         WHEN (bore = 15 AND type = 'bb' AND launched = 1915 AND
+               country = 'USA')
+           THEN 1
+      END AS mycase
+  FROM ships a
+    LEFT JOIN classes b
+      ON a.class = b.class
+)
+SELECT
+  name
+FROM v0
+WHERE mycase = 1
