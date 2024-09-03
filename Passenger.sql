@@ -59,5 +59,19 @@ WHERE c = (
     MAX(c)
   FROM v0
 );
-
-
+--76
+/*
+Определить время, проведенное в полетах, для пассажиров, летавших всегда на разных местах. Вывод: имя пассажира, время в минутах.
+*/
+SELECT
+  name,
+  place,
+  datediff(minute, time_out, time_in) AS minutes
+FROM Passenger a
+  LEFT JOIN Pass_in_trip b
+    ON a.ID_psg = b.ID_psg
+  LEFT JOIN Trip c
+    ON b.trip_no = c.trip_no
+GROUP BY name, place,
+         datediff(minute, time_out, time_in)
+HAVING count(1)=1;

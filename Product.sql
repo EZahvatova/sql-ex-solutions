@@ -542,5 +542,110 @@ SELECT
        ELSE '' END
     AS maker,
   type
-
 FROM v0;
+--75
+/*
+Для тех производителей, у которых есть продукты с известной ценой хотя бы в одной из таблиц Laptop, PC, Printer найти максимальные цены на каждый из типов продукции.
+Вывод: maker, максимальная цена на ноутбуки, максимальная цена на ПК, максимальная цена на принтеры.
+Для отсутствующих продуктов/цен использовать NULL.
+*/
+WITH v0 AS (
+  SELECT
+    maker,
+    a.model,
+    price,
+    d.type
+  FROM PC a RIGHT JOIN product d
+  ON a.model=d.model
+  UNION
+  SELECT
+    maker, b.model, price, d.type
+  FROM laptop b
+    RIGHT JOIN product d
+  ON b.model=d.model
+  UNION
+  SELECT
+    maker, c.model, price, d.type
+  FROM printer c
+    RIGHT JOIN product d
+  ON c.model=d.model
+)
+SELECT
+  maker,
+  CASE WHEN (type IS Laptop) THEN MAX(price) END AS laptop,
+  CASE WHEN (type IS PC) THEN MAX(price) END AS pc,
+  CASE WHEN (type IS Printer) THEN MAX(price) END AS printer,
+FROM v0;
+--85
+/*
+Найти производителей, которые выпускают только принтеры или только PC.
+При этом искомые производители PC должны выпускать
+ */
+WITH v0 AS (
+  -- взять уникальные комбинации мейкер и тайп
+  SELECT DISTINCT
+    maker,
+    type
+  FROM Product
+),v1 AS (
+  -- вывести тех кто производит только 1 тип
+  SELECT
+    maker,
+    MIN(type) AS min
+  FROM v0
+  GROUP BY maker
+  HAVING COUNT(1) = 1
+)
+-- производители принтера
+SELECT DISTINCT
+  maker
+FROM Product
+WHERE type = 'Printer'
+  AND maker IN (
+  SELECT
+    maker
+  FROM v1
+)
+UNION
+-- производители пк
+SELECT
+  maker
+FROM Product
+WHERE type = 'PC'
+  AND maker IN (
+  SELECT
+    maker
+  FROM v1
+)
+GROUP BY maker
+HAVING COUNT(1) > 2;
+--86
+/*
+Для каждого производителя перечислить в алфавитном порядке с разделителем "/" все типы выпускаемой им продукции.
+Вывод: maker, список типов продукции
+/*
+with v0 as (
+Select coalesce(maker, maker) as maker, coalesce(type, type) as types
+from product
+group by coalesce(maker, maker), coalesce(type, type)
+)
+select maker, GROUP_CONCAT (types) types
+from v0
+group by maker
+order by type;
+--89
+/*
+Найти производителей, у которых больше всего моделей в таблице Product, а также тех, у которых меньше всего моделей.
+Вывод: maker, число моделей
+ */
+SELECT
+  maker,
+  COUNT(1) AS Qty
+FROM Product
+WHERE maker IN (
+  SELECT
+    maker
+  FROM Product
+  GROUP BY maker
+  HAVING MAX(COUNT(1))
+);

@@ -597,55 +597,13 @@ country=USA
 WITH v0 AS (
   SELECT
     name,
-    CASE WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
-               type = 'bb')
-           THEN 1
-         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
-               launched = 1915)
-           THEN 1
-         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (numGuns = 8 AND bore = 15 AND displacement = 32000 AND
-               country = 'USA')
-           THEN 1
-         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
-               launched = 1915)
-           THEN 1
-         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (bore = 15 AND displacement = 32000 AND type = 'bb' AND
-               country = 'USA')
-           THEN 1
-         WHEN (displacement = 32000 AND type = 'bb' AND launched = 1915 AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (displacement = 32000 AND type = 'bb' AND launched = 1915 AND
-               country = 'USA')
-           THEN 1
-         WHEN (type = 'bb' AND launched = 1915 AND a.class = 'Kongo' AND
-               country = 'USA')
-           THEN 1
-         WHEN (numGuns = 8 AND displacement = 32000 AND launched = 1915 AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (numGuns = 8 AND displacement = 32000 AND launched = 1915 AND
-               country = 'USA')
-           THEN 1
-         WHEN (numGuns = 8 AND type = 'bb' AND launched = 1915 AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (numGuns = 8 AND type = 'bb' AND launched = 1915 AND
-               country = 'USA')
-           THEN 1
-         WHEN (bore = 15 AND type = 'bb' AND launched = 1915 AND
-               a.class = 'Kongo')
-           THEN 1
-         WHEN (bore = 15 AND type = 'bb' AND launched = 1915 AND
-               country = 'USA')
-           THEN 1
-      END AS mycase
+    CASE WHEN numGuns = 8 THEN 1 ELSE 0 END AS mycase1,
+    CASE WHEN bore = 15 THEN 1 ELSE 0 END AS mycase2,
+    CASE WHEN displacement = 32000 THEN 1 ELSE 0 END AS mycase3,
+    CASE WHEN type = 'bb' THEN 1 ELSE 0 END AS mycase4,
+    CASE WHEN launched = 1915 THEN 1 ELSE 0 END AS mycase5,
+    CASE WHEN a.class = 'Kongo' THEN 1 ELSE 0 END AS mycase6,
+    CASE WHEN country = 'USA' THEN 1 ELSE 0 END AS mycase7
   FROM ships a
     LEFT JOIN classes b
       ON a.class = b.class
@@ -653,4 +611,5 @@ WITH v0 AS (
 SELECT
   name
 FROM v0
-WHERE mycase = 1
+WHERE (mycase1 + mycase2 + mycase3 + mycase4 + mycase5 + mycase6 + mycase7) > 3
+;
