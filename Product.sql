@@ -572,10 +572,12 @@ WITH v0 AS (
 )
 SELECT
   maker,
-  CASE WHEN (type IS Laptop) THEN MAX(price) END AS laptop,
-  CASE WHEN (type IS PC) THEN MAX(price) END AS pc,
-  CASE WHEN (type IS Printer) THEN MAX(price) END AS printer,
-FROM v0;
+  CASE WHEN (type = 'Laptop') THEN MAX(price) END AS laptop,
+  CASE WHEN (type = 'PC') THEN MAX(price) END AS pc,
+  CASE WHEN (type = 'Printer') THEN MAX(price) END AS printer
+FROM v0
+WHERE price IS NOT NULL
+GROUP BY maker, type;
 --85
 /*
 Найти производителей, которые выпускают только принтеры или только PC.
@@ -623,29 +625,55 @@ HAVING COUNT(1) > 2;
 /*
 Для каждого производителя перечислить в алфавитном порядке с разделителем "/" все типы выпускаемой им продукции.
 Вывод: maker, список типов продукции
-/*
-with v0 as (
-Select coalesce(maker, maker) as maker, coalesce(type, type) as types
-from product
-group by coalesce(maker, maker), coalesce(type, type)
+ */
+WITH v0 AS (
+  SELECT
+    COALESCE(maker, maker) AS maker,
+    COALESCE(type, type) AS types
+  FROM Product
+  GROUP BY COALESCE(maker, maker), COALESCE(type, type)
 )
-select maker, GROUP_CONCAT (types) types
-from v0
-group by maker
-order by type;
+SELECT
+  maker,
+  GROUP_CONCAT(types SEPARATOR '/') as type
+FROM v0
+GROUP BY maker
+ORDER BY type;
 --89
 /*
 Найти производителей, у которых больше всего моделей в таблице Product, а также тех, у которых меньше всего моделей.
 Вывод: maker, число моделей
  */
-SELECT
-  maker,
-  COUNT(1) AS Qty
-FROM Product
-WHERE maker IN (
+WITH v0 AS (
   SELECT
-    maker
+    maker,
+    COUNT(model) AS qty
   FROM Product
   GROUP BY maker
-  HAVING MAX(COUNT(1))
-);
+)
+SELECT
+  a.maker,
+  a.qty
+FROM v0 a,
+  v0 b,
+  v0 c
+GROUP BY a.maker, a.qty
+HAVING MIN(b.qty) = a.qty OR MAX(c.qty) = a.qty;
+--90
+/*
+Вывести все строки из таблицы Product, кроме трех строк с наименьшими номерами моделей и трех строк с наибольшими номерами моделей.
+ */
+SELECT *
+FROM Product
+WHERE model NOT IN (
+  SELECT
+    top 3 model
+  FROM Product
+  ORDER BY model DESC
+)
+  AND model NOT IN (
+  SELECT
+    top 3 model
+  FROM Product
+  ORDER BY model
+)
